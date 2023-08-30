@@ -33,7 +33,8 @@ class _WebSocketManager:
         retries=10,
         restart_on_error=True,
         trace_logging=False,
-        private_auth_expire=1
+        private_auth_expire=1,
+        error_handler_callback=None
     ):
         self.testnet = testnet
         self.domain = domain
@@ -69,6 +70,8 @@ class _WebSocketManager:
         # Other optional data handling settings.
         self.handle_error = restart_on_error
 
+        # Error handler callback
+        self._error_handler_callback = error_handler_callback
         # Enable websocket-client's trace logging for extra debug information
         # on the websocket connection, including the raw sent & recv messages
         websocket.enableTrace(trace_logging)
@@ -217,6 +220,8 @@ class _WebSocketManager:
         ]:
             # Raises errors not related to websocket disconnection.
             self.exit()
+            if self._error_handler_callback:
+                self._error_handler_callback(error)
             raise error
 
         if not self.exited:
@@ -224,6 +229,8 @@ class _WebSocketManager:
                 f"WebSocket {self.ws_name} ({self.endpoint}) "
                 f"encountered error: {error}."
             )
+            if self._error_handler_callback:
+                self._error_handler_callback(error)
             self.exit()
 
         # Reconnect.
